@@ -13,3 +13,7 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 dotenvy = { workspace = true }
+
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+clickhouse = "0.12"
