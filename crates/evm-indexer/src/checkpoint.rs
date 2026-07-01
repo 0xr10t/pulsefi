@@ -1,0 +1,1 @@
+// read/write last indexed block

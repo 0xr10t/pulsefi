@@ -1,0 +1,1 @@
+// convert raw payload to internal trade type

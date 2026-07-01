@@ -10,3 +10,15 @@ Core goals:
 - Store metadata and alert configuration in Postgres
 - Use Redis for hot cache and live whale alerts
 - Expose dashboards through Grafana and APIs
+
+# Frequently used commands for the project
+
+cargo check --workspace
+cargo build --workspace
+cargo run -p evm-indexer
+cargo run -p hyperliquid-ingestor
+cargo run -p analytics-worker
+cargo run -p api-server
+cargo test --workspace
+cargo fmt --all
+cargo clippy --workspace --all-targets

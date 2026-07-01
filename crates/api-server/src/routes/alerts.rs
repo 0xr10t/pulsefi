@@ -1,0 +1,1 @@
+// latest whale alerts endpoint
