@@ -1,0 +1,114 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infra/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: pulsefi
+      POSTGRES_PASSWORD: pulsefi
+      POSTGRES_DB: pulsefi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  evm-indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CRATE: evm-indexer
+    environment:
+      RUST_LOG: info
+      EVM_RPC_URL: https://eth.llamarpc.com
+      EVM_WS_URL: wss://eth.llamarpc.com
+      CLICKHOUSE_URL: http://clickhouse:8123
+      POSTGRES_URL: postgres://pulsefi:pulsefi@postgres:5432/pulsefi  
+    depends_on:
+      - clickhouse
+      - postgres
+    restart: unless-stopped
+
+  hyperliquid-ingestor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CRATE: hyperliquid-ingestor
+    environment:
+      RUST_LOG: info
+      HYPERLIQUID_WS_URL: wss://api.hyperliquid.xyz/ws
+      CLICKHOUSE_URL: http://clickhouse:8123
+    depends_on:
+      - clickhouse
+    restart: unless-stopped
+
+  analytics-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CRATE: analytics-worker
+    environment:
+      RUST_LOG: info
+      CLICKHOUSE_URL: http://clickhouse:8123
+      POSTGRES_URL: postgres://pulsefi:pulsefi@postgres:5432/pulsefi
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - clickhouse
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CRATE: api-server
+    environment:
+      RUST_LOG: info
+      CLICKHOUSE_URL: http://clickhouse:8123
+      POSTGRES_URL: postgres://pulsefi:pulsefi@postgres:5432/pulsefi
+      REDIS_URL: redis://redis:6379
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - clickhouse
+      - postgres
+      - redis
+    restart: unless-stopped
+
+volumes:
+  clickhouse_data:
+  postgres_data:
+  redis_data:
+  grafana_data:
